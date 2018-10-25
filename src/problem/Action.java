@@ -21,6 +21,19 @@ public class Action {
     private TirePressure tirePressure;
 
     /**
+     * Constructor for CONTINUE_MOVING action
+     *
+     * @param actionType
+     */
+    public Action(ActionType actionType) {
+        if (actionType == ActionType.CONTINUE_MOVING) {
+            this.actionType = actionType;
+        } else {
+            throw new ValueException("Action type must be CONTINUE_MOVING");
+        }
+    }
+
+    /**
      * Constructor for CHANGE_CAR or CHANGE_DRIVER action.
      *
      * @param actionType
