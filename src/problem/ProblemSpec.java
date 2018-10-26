@@ -70,7 +70,7 @@ public class ProblemSpec {
      * Size s NT rows * CT columns
      * Each row, i, represents the ith terrain type
      * Each column, j, represents the jth Car type */
-    private float[][] slipProbability;
+    private double[] slipProbability;
 
     /**
      * Load problem spec from input file
@@ -119,7 +119,7 @@ public class ProblemSpec {
             // 1. line 1
             line = input.readLine();
             lineNo++;
-            s = new Scanner(line);
+            s = new Scanner(line).useLocale(Locale.US);
             int levelNumber = s.nextInt();
             level = new Level(levelNumber);
             s.close();
@@ -221,25 +221,20 @@ public class ProblemSpec {
             s.close();
 
             // 11. Slip probability by terrain and car matrix
-            slipProbability = new float[NT][CT];
+            slipProbability = new double[NT];
             line = input.readLine();
             lineNo++;
             s = new Scanner(line);
-            float rowSum;
             for (int i = 0; i < NT; i++) {
-                rowSum = 0;
-                for (int j = 0; j < CT; j++) {
-                    slipProbability[i][j] = s.nextFloat();
-                    rowSum += slipProbability[i][j];
-                }
-                if (Math.abs(rowSum - 1.0) > 0.001) {
-                    throw new InputMismatchException("Slip probability for does not sum to one for row " + i);
-                }
+                slipProbability[i] = s.nextDouble();
+
             }
             s.close();
+            input.close();
 
         } catch (InputMismatchException e) {
             System.out.println(e.getMessage());
+            e.printStackTrace();
             System.exit(1);
         } catch (NoSuchElementException e) {
             System.out.println("Not enough tokens on input file - line " + lineNo);
@@ -354,7 +349,7 @@ public class ProblemSpec {
             case "performance":
                 return Tire.PERFORMANCE;
             default:
-                String errMsg = "Invalid tyre type " + tireText + "on line " + lineNo;
+                String errMsg = "Invalid tyre type " + tireText + " on line " + lineNo;
                 throw new InputMismatchException(errMsg);
         }
     }
@@ -455,7 +450,7 @@ public class ProblemSpec {
         return fuelUsage;
     }
 
-    public float[][] getSlipProbability() {
+    public double[] getSlipProbability() {
         return slipProbability;
     }
 
