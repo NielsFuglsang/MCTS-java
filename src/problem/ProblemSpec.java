@@ -227,7 +227,6 @@ public class ProblemSpec {
             s = new Scanner(line);
             for (int i = 0; i < NT; i++) {
                 slipProbability[i] = s.nextDouble();
-
             }
             s.close();
             input.close();

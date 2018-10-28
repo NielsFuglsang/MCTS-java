@@ -1,9 +1,12 @@
 package simulator;
 
-import jdk.nashorn.internal.runtime.regexp.joni.exception.*;
+import jdk.nashorn.internal.runtime.regexp.joni.exception.ValueException;
 import problem.*;
 
 import java.io.IOException;
+import java.util.Random;
+
+//import io.IOException;
 
 /**
  * This class is the simulator for the problem.
@@ -157,13 +160,31 @@ public class Simulator {
         String car = currentState.getCarType();
         String driver = currentState.getDriver();
         Tire tire = currentState.getTireModel();
+        TirePressure pressure = currentState.getTirePressure();
 
         // calculate priors
-        float priorK = 1 / ps.CAR_MOVE_RANGE;
-        float priorCar = 1 / ps.getCT();
-        float priorDriver = 1 / ps.getDT();
-        float priorTire = 1 / ps.NUM_TYRE_MODELS;
-        // TODO: prior for terrain?
+        float priorK = 1f / ps.CAR_MOVE_RANGE;
+        float priorCar = 1f / ps.getCT();
+        float priorDriver = 1f / ps.getDT();
+        float priorTire = 1f / ps.NUM_TYRE_MODELS;
+
+        // slipProbability depends on pressure:
+        double slipProbability = ps.getSlipProbability()[ps.getTerrainIndex(terrain)];
+        switch (pressure) {
+            case SEVENTY_FIVE_PERCENT:
+                slipProbability *= 2;
+            case ONE_HUNDRED_PERCENT:
+                slipProbability *= 3;
+        }
+        // probability is
+        double[] pKGivenTerrainPressure = new double[12];
+        for (int i = 0; i < 12; i++) {
+            if (i == 10) {
+                pKGivenTerrainPressure[i] = slipProbability;
+            } else {
+                pKGivenTerrainPressure[i] = (1d - slipProbability) / 12;
+            }
+        }
 
         // get probabilities of k given parameter
         float[] pKGivenCar = ps.getCarMoveProbability().get(car);
@@ -177,10 +198,48 @@ public class Simulator {
 
         // use conditional probability formula on assignment sheet to get what
         // we want
-        
+        float denominator = 0; // Init sum
+        for (int i = 0; i < 12; i++) {
+            denominator += pKGivenCar[i]*pKGivenDriver[i]*pKGivenTire[i]*pKGivenTerrainPressure[i];
+        }
+        double[] pKGivenParams = new double[12];
+        for (int i = 0; i < 12; i++) {
+            pKGivenParams[i] = pKGivenCar[i]*pKGivenDriver[i]*pKGivenTire[i]*pKGivenTerrainPressure[i] / denominator;
+        }
 
 
-        return -1;
+        // Index K out of bounds may result in move out of bounds
+        if (currentState.getPos() < 4) {
+            for (int i = 0; i < 4-currentState.getPos(); i++) {
+                pKGivenParams[i+1] += pKGivenParams[i];
+                pKGivenParams[i] = 0;
+            }
+        } else if (currentState.getPos() > ps.getN() - 5) {
+            for (int i = ps.getN(); i < ps.getN() - 5; i--) {
+                pKGivenParams[i-1] += pKGivenParams[i];
+                pKGivenParams[i] = 0;
+            }
+        }
+
+        // cdf used to find random number
+        double[] cdfKGivenParams = new double[12];
+        cdfKGivenParams = pKGivenParams;
+        for (int i = 1; i < 12; i++) {
+            cdfKGivenParams[i] += cdfKGivenParams[i-1];
+        }
+        if (cdfKGivenParams[12] - 1 > 0.001) {
+            throw new IllegalArgumentException("Probabilities does not add up to 1");
+        }
+
+        Random rand = new Random();
+        double gen = rand.nextDouble();
+        for (int i = 0; i < 11; i++) {
+            if (gen > cdfKGivenParams[i] && gen < cdfKGivenParams[i+1]) {
+                return i-4;
+            }
+        }
+        return 0;
+
     }
 
     /**

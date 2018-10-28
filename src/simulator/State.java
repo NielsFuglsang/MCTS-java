@@ -1,6 +1,7 @@
 package simulator;
 
 import problem.ProblemSpec;
+import problem.Terrain;
 import problem.Tire;
 import problem.TirePressure;
 
@@ -342,4 +343,5 @@ public class State {
     public Tire getTireModel() {
         return tireModel;
     }
+
 }
