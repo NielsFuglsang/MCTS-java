@@ -343,5 +343,4 @@ public class State {
     public Tire getTireModel() {
         return tireModel;
     }
-
 }

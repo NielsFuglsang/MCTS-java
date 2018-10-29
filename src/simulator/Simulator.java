@@ -182,7 +182,7 @@ public class Simulator {
             if (i == 10) {
                 pKGivenTerrainPressure[i] = slipProbability;
             } else {
-                pKGivenTerrainPressure[i] = (1d - slipProbability) / 12;
+                pKGivenTerrainPressure[i] = (1d - slipProbability) / 11;
             }
         }
 
