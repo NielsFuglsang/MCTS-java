@@ -36,7 +36,7 @@ public enum Terrain {
         ASPHALT_SLALOM_FLAT.text = "asphalt-slalom-flat";
     }
 
-    String asString() {
+    public String asString() {
         return text;
     }
 }

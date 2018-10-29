@@ -104,10 +104,10 @@ public class Level {
 
     private void loadActions(int maxAction) {
         if (maxAction >= 4) {
-            availableActions.add(ActionType.CONTINUE_MOVING);
+            availableActions.add(ActionType.MOVE);
             availableActions.add(ActionType.CHANGE_CAR);
             availableActions.add(ActionType.CHANGE_DRIVER);
-            availableActions.add(ActionType.CHANGE_TYRES);
+            availableActions.add(ActionType.CHANGE_TIRES);
         }
         if (maxAction >= 6) {
             availableActions.add(ActionType.ADD_FUEL);
@@ -117,7 +117,7 @@ public class Level {
             availableActions.add(ActionType.CHANGE_CAR_AND_DRIVER);
         }
         if (maxAction >= 8) {
-            availableActions.add(ActionType.CHANGE_TYRE_FUEL_PRESSURE);
+            availableActions.add(ActionType.CHANGE_TIRE_FUEL_PRESSURE);
         }
     }
 }
