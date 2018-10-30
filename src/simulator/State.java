@@ -10,9 +10,7 @@ import problem.TirePressure;
  *
  * - position of the car (i.e. the cell index)
  * - whether the car is in slip condition
- * - slip time remaining
  * - whether the car is in breakdown condition
- * - breakdown time remaining
  * - car type
  * - car fuel
  * - car tire pressure
@@ -25,12 +23,8 @@ public class State {
     private int pos;
     /** Whether the car is in a slip condition **/
     private boolean slip;
-    /** Time remaining on slip condition **/
-    private int slipTimeLeft;
     /** Whether the car is broken down **/
     private boolean breakdown;
-    /** Time remaining on breakdown condition **/
-    private int breakdownTimeLeft;
     /** The car type **/
     private String carType;
     /** Fuel remaining **/
@@ -47,9 +41,7 @@ public class State {
      *
      * @param pos cell index of car in environment
      * @param slip if car is in slip condition
-     * @param slipTimeLeft time remaining on slip if in slip
      * @param breakdown if car is in breakdown condition
-     * @param breakdownTimeLeft time remaining on breakdown if in breakdown
      * @param carType the type of car
      * @param fuel the amount of fuel
      *        (assumes ProblemSpec.FUEL_MIN <= fuel <= ProblemSpec.FUEL_MAX)
@@ -57,14 +49,11 @@ public class State {
      * @param driver the driver
      * @param tireModel the model of the tires
      */
-    public State(int pos, boolean slip, int slipTimeLeft, boolean breakdown,
-                 int breakdownTimeLeft, String carType, int fuel,
-                 TirePressure tirePressure, String driver, Tire tireModel) {
+    public State(int pos, boolean slip, boolean breakdown, String carType,
+                 int fuel, TirePressure tirePressure, String driver, Tire tireModel) {
         this.pos = pos;
         this.slip = slip;
-        this.slipTimeLeft = slipTimeLeft;
         this.breakdown = breakdown;
-        this.breakdownTimeLeft = breakdownTimeLeft;
         this.carType = carType;
         this.fuel = fuel;
         this.tirePressure = tirePressure;
@@ -83,7 +72,8 @@ public class State {
      */
     public static State getStartState(String carType, String driver,
                                       Tire tire) {
-        return new State(0, false, 0, false, 0, carType, ProblemSpec.FUEL_MAX,
+        // position is not 0 indexed, as per assignment spec
+        return new State(1, false, false, carType, ProblemSpec.FUEL_MAX,
                 TirePressure.ONE_HUNDRED_PERCENT, driver, tire);
     }
 
@@ -111,63 +101,27 @@ public class State {
     }
 
     /**
-     * Return the next state after changing the slip condition and slip time
-     * left of current state
+     * Return the next state after changing the slip condition of current state
      *
      * @param newSlip the new slip condition
-     * @param newSlipTimeLeft the new slip time left
      * @return the next state
      */
-    public State changeSlipCondition(boolean newSlip, int newSlipTimeLeft) {
+    public State changeSlipCondition(boolean newSlip) {
         State nextState = copyState();
         nextState.slip = newSlip;
-        nextState.slipTimeLeft = newSlipTimeLeft;
         return nextState;
     }
 
     /**
-     * Return the next state after reducing the slip time left counter by one
-     * step
-     *
-     * @return the next state
-     */
-    public State reduceSlipTimeLeft() {
-        int newSlipTime = slipTimeLeft - 1;
-        if (newSlipTime <= 0) {
-            return changeSlipCondition(false, 0);
-        } else {
-            return changeSlipCondition(slip, newSlipTime);
-        }
-    }
-
-    /**
-     * Return the next state after changing the breakdown condition and
-     * breakdown time left of current state
+     * Return the next state after changing the breakdown condition of current state
      *
      * @param newBreakdown the new breakdown condition
-     * @param newBreakdownTimeLeft new breakdown time left
      * @return the next state
      */
-    public State changeBreakdownCondition(boolean newBreakdown,
-                                          int newBreakdownTimeLeft) {
+    public State changeBreakdownCondition(boolean newBreakdown) {
         State nextState = copyState();
         nextState.breakdown = newBreakdown;
-        nextState.breakdownTimeLeft = newBreakdownTimeLeft;
         return nextState;
-    }
-
-    /**
-     * Return the next state after reducing the breakdown repair timer by one
-     *
-     * @return the next state
-     */
-    public State reduceBreakdownTimeLeft() {
-        int newBreakdownTime = breakdownTimeLeft - 1;
-        if (newBreakdownTime <= 0) {
-            return changeBreakdownCondition(false, 0);
-        } else {
-            return changeBreakdownCondition(breakdown, newBreakdownTime);
-        }
     }
 
     /**
@@ -217,7 +171,7 @@ public class State {
      * @return the next state
      */
     public State addFuel(int fuelToAdd) {
-        if (fuelToAdd > 0) {
+        if (fuelToAdd < 0) {
             throw new IllegalArgumentException("Fuel to add must be positive");
         }
 
@@ -237,7 +191,7 @@ public class State {
      * @return the next state
      */
     public State consumeFuel(int fuelConsumed) {
-        if (fuelConsumed > 0) {
+        if (fuelConsumed < 0) {
             throw new IllegalArgumentException("Fuel consumed must be positive");
         }
         State nextState = copyState();
@@ -273,6 +227,8 @@ public class State {
         State nextState = copyState();
         nextState.carType = newCarType;
         nextState.driver = newDriver;
+        nextState.fuel = ProblemSpec.FUEL_MAX;
+        nextState.tirePressure = TirePressure.ONE_HUNDRED_PERCENT;
         return nextState;
     }
 
@@ -299,8 +255,21 @@ public class State {
      * @return deep copy of current state
      */
     public State copyState() {
-        return new State(pos, slip, slipTimeLeft, breakdown, breakdownTimeLeft,
-                carType, fuel, tirePressure, driver, tireModel);
+        return new State(pos, slip, breakdown, carType, fuel, tirePressure, driver,
+                tireModel);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("State: [ ");
+        sb.append("Pos=").append(pos).append(" | ");
+        sb.append("Car=").append(carType).append(" | ");
+        sb.append("Driver=").append(driver).append(" | ");
+        sb.append("Tire=").append(tireModel.toString()).append(" | ");
+        sb.append("Pressure=").append(tirePressure.asString()).append(" | ");
+        sb.append("Fuel=").append(fuel).append(" ]\n");
+        return sb.toString();
     }
 
     public int getPos() {
@@ -311,16 +280,8 @@ public class State {
         return slip;
     }
 
-    public int getSlipTimeLeft() {
-        return slipTimeLeft;
-    }
-
     public boolean isInBreakdownCondition() {
         return breakdown;
-    }
-
-    public int getBreakdownTimeLeft() {
-        return breakdownTimeLeft;
     }
 
     public String getCarType() {

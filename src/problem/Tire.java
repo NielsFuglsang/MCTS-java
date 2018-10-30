@@ -18,7 +18,7 @@ public enum Tire {
         PERFORMANCE.text = "performance";
     }
 
-    String asString() {
+    public String asString() {
         return text;
     }
 }
