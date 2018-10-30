@@ -277,6 +277,7 @@ public class Simulator {
         double[] pPressureTerrainGivenK = bayesRule(pKGivenPressureTerrain,
                 (priorTerrain * priorPressure), priorK);
 
+
         // use conditional probability formula on assignment sheet to get what
         // we want (but what is it that we want....)
         double[] kProbs = new double[ProblemSpec.CAR_MOVE_RANGE];
@@ -295,6 +296,16 @@ public class Simulator {
         }
 
         return kProbs;
+    }
+
+    private boolean posExist(int moves) {
+        if(currentState.getPos()+ moves < 0) {
+            return false;
+        }
+        return true;
+    }
+    private int maxStepUp() {
+        return ps.getN() - 1 - currentState.getPos();
     }
 
     /**

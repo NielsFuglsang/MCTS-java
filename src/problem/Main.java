@@ -1,5 +1,7 @@
 package problem;
 
+import simulator.Simulator;
+
 import java.io.IOException;
 
 public class Main {
@@ -15,6 +17,12 @@ public class Main {
             System.exit(1);
         }
         System.out.println("Finished loading!");
+        Simulator simulator;
+        try{
+            simulator = new Simulator("examples\\level_1\\input1.txt");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
     }
 }
