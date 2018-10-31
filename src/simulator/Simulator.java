@@ -298,16 +298,6 @@ public class Simulator {
         return kProbs;
     }
 
-    private boolean posExist(int moves) {
-        if(currentState.getPos()+ moves < 0) {
-            return false;
-        }
-        return true;
-    }
-    private int maxStepUp() {
-        return ps.getN() - 1 - currentState.getPos();
-    }
-
     /**
      * Convert the probability of slipping on a given terrain with 50% tire
      * pressure into a probability list, of move distance versus current
