@@ -14,9 +14,16 @@ public class ValueIteration {
     ProblemSpec ps;
     HashMap<State, Double> valueIteration = new HashMap<>();
     HashMap<State, Double> reward = new HashMap<>();
-    List<String> cars = ps.getCarOrder();
-    List<String> drivers = ps.getDriverOrder();
-    List<Tire> tires = ps.getTireOrder();
+    List<String> cars;
+    List<String> drivers;
+    List<Tire> tires;
+
+    public ValueIteration(ProblemSpec ps) {
+        this.ps = ps;
+        cars = ps.getCarOrder();
+        drivers = ps.getDriverOrder();
+        tires = ps.getTireOrder();
+    }
 
     public void valueIteration() {
         State state;
@@ -28,7 +35,8 @@ public class ValueIteration {
                         if(ps.getLevel().getLevelNumber() == 1) {
                             state = new State(pos, false, false, cars.get(car),
                                     50, null, drivers.get(driver), tires.get(tire));
-                            double newValue = reward.get(state) + valueIteration.get(state)*ps.getDiscountFactor();
+                            double sum = sumTransistionFunc(state);
+                            double newValue = reward.get(state) + sumTransistionFunc(state)*ps.getDiscountFactor();
                             valueIteration.put(state, newValue);
 
                         }
@@ -41,7 +49,7 @@ public class ValueIteration {
     }
 
     public double sumTransistionFunc(State s) {
-        Terrain terrain = ps.getEnvironmentMap()[s.getPos() - 1];
+        Terrain terrain = ps.getEnvironmentMap()[s.getPos()];
         int terrainIndex = ps.getTerrainIndex(terrain);
         String car = s.getCarType();
         String driver = s.getDriver();
@@ -99,7 +107,12 @@ public class ValueIteration {
                 kProbs[i] = 0;
             } else {
                 kProbs[i] += probability;
-                State s1 = s.copyState().changePosition(i-4, ps.getN());
+                State s1;
+                if(s.getPos()+(i-4) != 0) {
+                    s1 = s.copyState().changePosition(i - 4, ps.getN());
+                } else {
+                    s1 = s;
+                }
                 kProbs[i] *= valueIteration.get(s1);
                 probability = 0;
             }
@@ -113,7 +126,7 @@ public class ValueIteration {
         return sumTransistion;
     }
 
-    private void initReward() {
+    public void initReward() {
         State state;
         for(int pos=0; pos<ps.getN(); pos++) {
             for(int car=0; car<ps.getCT(); car++) {
