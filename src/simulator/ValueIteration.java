@@ -1,9 +1,6 @@
 package simulator;
 
-import problem.Action;
-import problem.ProblemSpec;
-import problem.Terrain;
-import problem.Tire;
+import problem.*;
 import simulator.State;
 
 import java.util.HashMap;
@@ -13,32 +10,81 @@ import java.util.List;
 public class ValueIteration {
     ProblemSpec ps;
     HashMap<State, Double> valueIteration = new HashMap<>();
+    HashMap<State, Integer> policy = new HashMap<>();
+    HashMap<State, Double> valueIterationTmp = new HashMap<>();
+    HashMap<State, Integer> policyTmp = new HashMap<>();
     HashMap<State, Double> reward = new HashMap<>();
-    List<String> cars = ps.getCarOrder();
-    List<String> drivers = ps.getDriverOrder();
-    List<Tire> tires = ps.getTireOrder();
+    List<String> cars;
+    List<String> drivers;
+    List<Tire> tires;
+
+    public ValueIteration(ProblemSpec ps) {
+        this.ps = ps;
+        cars = ps.getCarOrder();
+        drivers = ps.getDriverOrder();
+        tires = ps.getTireOrder();
+    }
 
     public void valueIteration() {
         State state;
+        State newState;
         //Go through each state
-         for(int pos=0; pos<ps.getN(); pos++) {
+        for(int pos=0; pos<ps.getN(); pos++) {
             for(int car=0; car<ps.getCT(); car++) {
                 for(int driver=0; driver<ps.getDT(); driver++) {
                     for(int tire=0; tire<ps.NUM_TYRE_MODELS; tire++) {
                         if(ps.getLevel().getLevelNumber() == 1) {
                             state = new State(pos, false, false, cars.get(car),
-                                    50, null, drivers.get(driver), tires.get(tire));
-                            double newValue = reward.get(state) + valueIteration.get(state)*ps.getDiscountFactor();
-                            valueIteration.put(state, newValue);
+                                    50, TirePressure.ONE_HUNDRED_PERCENT, drivers.get(driver), tires.get(tire));
+                            double bestValue = 0.0;
+                            int bestAction = 1;
+                            for(ActionType a : ps.getLevel().getAvailableActions()) {
+                                if(a.getActionNo() == 1) { //Move
+                                    double newValue = reward.get(state) + sumTransitionFunc(state) * ps.getDiscountFactor();
+                                    if (bestValue < newValue) {
+                                        bestValue = newValue;
+                                        bestAction = a.getActionNo();
+                                    }
+                                } else if(a.getActionNo() == 2) { //Change car
+                                    newState = new State(pos, false, false, cars.get(car + 1 % 2),
+                                            50, TirePressure.ONE_HUNDRED_PERCENT, drivers.get(driver), tires.get(tire));
+                                    double newValue = reward.get(state) + valueIteration.get(newState) * ps.getDiscountFactor();
+                                    if (bestValue < newValue) {
+                                        bestValue = newValue;
+                                        bestAction = a.getActionNo();
+                                    }
+                                } else if(a.getActionNo() == 3) { //Change driver
+                                    newState = new State(pos, false, false, cars.get(car),
+                                            50, TirePressure.ONE_HUNDRED_PERCENT, drivers.get(driver + 1 % 2), tires.get(tire));
+                                    double newValue = reward.get(state) + valueIteration.get(newState) * ps.getDiscountFactor();
+                                    if (bestValue < newValue) {
+                                        bestValue = newValue;
+                                        bestAction = a.getActionNo();
+                                    }
+                                } else if(a.getActionNo() == 4) { //Change tires
+                                    for (int newTire=0; newTire<ps.NUM_TYRE_MODELS - 1; newTire++) {
+                                        newState = new State(pos, false, false, cars.get(car),
+                                                50, TirePressure.ONE_HUNDRED_PERCENT, drivers.get(driver), tires.get(newTire % ps.NUM_TYRE_MODELS));
+                                        double newValue = reward.get(state) + valueIteration.get(newState) * ps.getDiscountFactor();
+                                        if (bestValue < newValue) {
+                                            bestValue = newValue;
+                                            bestAction = a.getActionNo();
+                                        }
+                                    }
+                                }
+                                valueIterationTmp.put(state, bestValue);
+                                policyTmp.put(state, bestAction);
+                            }
                         }
                     }
                 }
             }
         }
-
+        valueIteration = valueIterationTmp;
+        policy = policyTmp;
     }
 
-    public double sumTransistionFunc(State s) {
+    public double sumTransitionFunc(State s) {
         Terrain terrain = ps.getEnvironmentMap()[s.getPos() - 1];
         int terrainIndex = ps.getTerrainIndex(terrain);
         String car = s.getCarType();
@@ -83,11 +129,9 @@ public class ValueIteration {
             kProbs[k] /= kProbsSum;
         }
 
-
-
         float probability = 0;
-        for(int i=0; i<kProbs.length; i++) {
-            if(s.getPos() +(i-4) < 0) {
+        for(int i=0; i<kProbs.length-2; i++) {
+            if(s.getPos() + (i-4) < 0) {
                 probability += kProbs[i];
                 kProbs[i] = 0;
             } else if (s.getPos() + (i-4) >= ps.getN()) {
@@ -102,6 +146,8 @@ public class ValueIteration {
                 probability = 0;
             }
         }
+        kProbs[10] *= -ps.getSlipRecoveryTime()*0.1;
+        kProbs[11] *= -ps.getRepairTime()*0.1;
 
         double sumTransistion = 0.0;
         for(Double prob : kProbs) {
@@ -111,7 +157,7 @@ public class ValueIteration {
         return sumTransistion;
     }
 
-    private void initReward() {
+    public void initReward() {
         State state;
         for(int pos=0; pos<ps.getN(); pos++) {
             for(int car=0; car<ps.getCT(); car++) {
@@ -119,7 +165,7 @@ public class ValueIteration {
                     for(int tire=0; tire<ps.NUM_TYRE_MODELS; tire++) {
                         if(ps.getLevel().getLevelNumber() == 1) {
                             state = new State(pos, false, false, cars.get(car),
-                                    50, null, drivers.get(driver), tires.get(tire));
+                                    50, TirePressure.ONE_HUNDRED_PERCENT, drivers.get(driver), tires.get(tire));
                             if(pos != ps.getN()-1) {
                                 valueIteration.put(state, -0.1);
                                 reward.put(state, -0.1);
