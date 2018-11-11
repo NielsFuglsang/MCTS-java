@@ -18,8 +18,12 @@ public class Node {
     public float reward;
     public int count;
     public double winScore;
+    public Action action;
 
     public Node() {
+        this.state = null;
+        this.parent = null;
+        this.childArray = null;
     }
 
     public Node(State state) {
@@ -103,5 +107,8 @@ public class Node {
             this.winScore += score;
     }
 
+    public void setAction(Action a) { this.action = a; }
+
+    public Action getAction() { return this.action; }
 
 } 
