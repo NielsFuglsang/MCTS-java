@@ -1,7 +1,8 @@
-package simulator;
+package valueiteration;
 
 import problem.ActionType;
 import problem.ProblemSpec;
+import simulator.State;
 
 import java.util.HashMap;
 

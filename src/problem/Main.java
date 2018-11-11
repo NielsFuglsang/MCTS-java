@@ -1,7 +1,8 @@
 package problem;
 
-import simulator.Policy;
-import simulator.Simulator;
+
+import mcts.MCTS;
+
 import java.io.IOException;
 
 public class Main {
@@ -12,7 +13,7 @@ public class Main {
         try {
             ps = new ProblemSpec(args[0]); //args[0]);
             System.out.println(ps.toString());
-            Policy p = new Policy(ps);
+            MCTS mcts = new MCTS(ps);
         } catch (IOException e) {
             System.out.println("IO Exception occurred");
             System.exit(1);

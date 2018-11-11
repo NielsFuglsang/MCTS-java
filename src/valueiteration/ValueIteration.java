@@ -1,4 +1,4 @@
-package simulator;
+package valueiteration;
 
 import problem.*;
 import simulator.State;
@@ -35,11 +35,13 @@ public class ValueIteration {
                     for(int tire=0; tire<ps.NUM_TYRE_MODELS; tire++) {
                         if(ps.getLevel().getLevelNumber() == 1) {
                             state = new State(pos, false, false, cars.get(car),
-                                    50, TirePressure.ONE_HUNDRED_PERCENT, drivers.get(driver), tires.get(tire));
+                                    ps.FUEL_MAX, TirePressure.ONE_HUNDRED_PERCENT, drivers.get(driver), tires.get(tire));
                             double bestValue = 0.0;
                             int bestAction = 1;
                             for(ActionType a : ps.getLevel().getAvailableActions()) {
                                 if(a.getActionNo() == 1) { //Move
+                                    System.out.println(valueIteration.get(state));
+                                    System.out.println(sumTransitionFunc(state));
                                     double newValue = reward.get(state) + sumTransitionFunc(state) * ps.getDiscountFactor();
                                     if (bestValue < newValue) {
                                         bestValue = newValue;
@@ -85,7 +87,7 @@ public class ValueIteration {
     }
 
     public double sumTransitionFunc(State s) {
-        Terrain terrain = ps.getEnvironmentMap()[s.getPos() - 1];
+        Terrain terrain = ps.getEnvironmentMap()[s.getPos()];
         int terrainIndex = ps.getTerrainIndex(terrain);
         String car = s.getCarType();
         String driver = s.getDriver();
