@@ -76,7 +76,6 @@ public class Simulator {
      * @return the next state or null if max time steps exceeded for problem
      */
     public State step(Action a) throws IllegalArgumentException {
-
         State nextState;
 
         if (!actionValidForLevel(a)) {

@@ -1,5 +1,8 @@
 package problem;
 
+
+import mcts.MCTS;
+
 import java.io.IOException;
 
 public class Main {
@@ -8,13 +11,13 @@ public class Main {
 
         ProblemSpec ps;
         try {
-            ps = new ProblemSpec(args[0]);
+            ps = new ProblemSpec(args[0]); //args[0]);
             System.out.println(ps.toString());
+            MCTS mcts = new MCTS(ps);
         } catch (IOException e) {
             System.out.println("IO Exception occurred");
             System.exit(1);
         }
         System.out.println("Finished loading!");
-
     }
 }
