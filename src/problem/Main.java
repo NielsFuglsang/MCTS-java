@@ -4,10 +4,13 @@ package problem;
 import mcts.MCTS;
 
 import java.io.IOException;
+import java.util.Locale;
 
 public class Main {
 
     public static void main(String[] args) {
+        Locale.setDefault(Locale.US);
+
         ProblemSpec ps;
         long startTime = System.currentTimeMillis();
         int step = 1;
