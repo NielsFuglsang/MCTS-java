@@ -14,7 +14,6 @@ import java.util.Random;
  */
 public class SimulatorTest {
 
-
     /**
      * A basic test of the Dynamic.optimalCostDynamic method
      */
