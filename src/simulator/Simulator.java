@@ -26,8 +26,6 @@ public class Simulator {
     /** path and name for output file **/
     private String outputFile;
 
-
-
     /**
      * Construct a new simulator instance from the given problem spec
      *

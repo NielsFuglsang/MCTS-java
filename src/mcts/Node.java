@@ -30,16 +30,22 @@ public class Node {
     public Node(State state) {
         this.state = state;
         this.childArray = new ArrayList<>();
+        this.reward = 0;
+        this.count = 0;
     }
 
     public Node(State state, Node parent, List<Node> childArray) {
         this.state = state;
         this.parent = parent;
         this.childArray = childArray;
+        this.reward = 0;
+        this.count = 0;
     }
 
     public Node(Node node) {
         this.childArray = new ArrayList<>();
+        this.reward = 0;
+        this.count = 0;
         State s = node.getState();
         this.state = new State( s.getPos(),
                 s.isInSlipCondition(),

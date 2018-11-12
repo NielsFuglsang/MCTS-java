@@ -4,42 +4,69 @@ import problem.*;
 import simulator.*;
 
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.List;
 
 public class MCTS {
     private ProblemSpec ps;
+    public int stepCounter = 0;
 
-    public MCTS(ProblemSpec ps) {
+    public MCTS(ProblemSpec ps, String output) {
         this.ps = ps;
+        int step = 0;
         State s = new State(1, false, false, ps.getFirstCarType(), ProblemSpec.FUEL_MAX,
                 TirePressure.ONE_HUNDRED_PERCENT, ps.getFirstDriver(), ps.getFirstTireModel());
-        String output = "";
         Simulator sim = new Simulator(ps, output);
         Action a;
-        while (s.getPos() < ps.getN()-1) {
+        while (s.getPos() < ps.getN()) {
             a = findNextMove(s);
-            sim.step(a);
-            s = sim.step(new Action(ActionType.MOVE));
+            s = sim.step(a);
+            if (s != null)
+                step += increaseStep(ps, s, a);
+            if (a.getActionType().getActionNo() != 1) {
+                s = sim.step(new Action(ActionType.MOVE));
+                if (s != null)
+                    step += increaseStep(ps, s, a);
+            }
+
+            if (s == null) {
+                System.out.println("Failed attempt. Retrying...");
+                step = 0;
+                s = new State(1, false, false, ps.getFirstCarType(), ProblemSpec.FUEL_MAX,
+                        TirePressure.ONE_HUNDRED_PERCENT, ps.getFirstDriver(), ps.getFirstTireModel());
+                sim = new Simulator(ps, output);
+            }
         }
-        System.out.println(output);
+        System.out.println("Goal Reached!!!");
+        /*BufferedReader br = null;
+        try {
+            br = new BufferedReader(new FileReader(output));
+            String line = null;
+            while ((line = br.readLine()) != null) {
+                System.out.println(line);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }*/
+        this.stepCounter = step;
     }
 
     private int getMillisForCurrentLevel() {
-        return 10 * ps.getLevel().getLevelNumber() + 3;
+        return 5*ps.getLevel().getLevelNumber()+5;
     }
 
     public Action findNextMove(State s) {
         long start = System.currentTimeMillis();
-        long end = start + 60*getMillisForCurrentLevel();
+        long end = start + 100*getMillisForCurrentLevel();
 
         Tree tree = new Tree();
         Node rootNode = tree.getRoot();
         rootNode.setState(s);
         rootNode.setChildArray(getPossibleChildren(rootNode));
 
-        //while (System.currentTimeMillis() < end) {
-        for (int i = 0; i < 5; i++) {
+        while (System.currentTimeMillis() < end) {
             // Phase 1 - Selection
             Node promisingNode = selectPromisingNode(rootNode);
 
@@ -56,13 +83,15 @@ public class MCTS {
         }
 
         Node winnerNode = rootNode.getChildWithMaxScore();
-        tree.setRoot(winnerNode);
         return winnerNode.getAction();
     }
 
     private Node selectPromisingNode(Node rootNode) {
         Node node = rootNode;
-        node = UCT.findBestNodeWithUCT(node);
+        if (node.getVisitCount() < node.getChildArray().size())
+            node = node.getRandomChildNode();
+        else
+            node = UCT.findBestNodeWithUCT(node);
         return node;
     }
 
@@ -76,22 +105,19 @@ public class MCTS {
     }
 
     private double simulateRandomPlayout(Node node) {
-        double reward = 0.0;
-        if (node.state.getFuel() < 10) {
-            reward = -100;
-        }
+        double reward;
+
         MoveSimulator ms = new MoveSimulator();
         State simResult = ms.performA1(ps, node);
 
         if (simResult.isInBreakdownCondition()){
-
+            reward = - ps.getRepairTime();
         } else if (simResult.isInSlipCondition()){
-
+            reward = - ps.getRepairTime();
         } else {
-            if (simResult.getPos() > node.state.getPos())
-                reward = 1;
+            reward = simResult.getPos() - node.state.getPos();
         }
-        return reward;
+        return 0.9*reward;
     }
 
     public List<Node> getPossibleChildren(Node node) {
@@ -99,12 +125,31 @@ public class MCTS {
         List<Node> possibleNodes = new ArrayList<>();
         State s = node.getState();
 
-        if (node.state.getFuel() < 10) {
-            Node tmpNode = new Node();
-            tmpNode.setParent(node);
-            tmpNode.setAction(new Action(ActionType.ADD_FUEL,50 - s.getFuel()));
-            tmpNode.setState(s.addFuel(50 - s.getFuel()));
-            possibleNodes.add(tmpNode);
+        Terrain terrain = ps.getEnvironmentMap()[s.getPos() - 1];
+        String car = s.getCarType();
+        TirePressure pressure = s.getTirePressure();
+
+        // get fuel consumption
+        int terrainIndex = ps.getTerrainIndex(terrain);
+        int carIndex = ps.getCarIndex(car);
+        int fuelConsumption = ps.getFuelUsage()[terrainIndex][carIndex];
+
+        if (pressure == TirePressure.FIFTY_PERCENT) {
+            fuelConsumption *= 3;
+        } else if (pressure == TirePressure.SEVENTY_FIVE_PERCENT) {
+            fuelConsumption *= 2;
+        }
+        int currentFuel = s.getFuel();
+        if (fuelConsumption > currentFuel) {
+            for (int i = 0; i < ps.getCT(); i++) {
+                Node tmpNode = new Node();
+                tmpNode.setParent(node);
+                tmpNode.setAction(new Action(ActionType.CHANGE_CAR,ps.getCarOrder().get(i)));
+                tmpNode.setState(s.changeCarType(ps.getCarOrder().get(i)));
+                if (!ps.getCarOrder().get(i).equals(node.state.getCarType())) {
+                    possibleNodes.add(tmpNode);
+                }
+            }
         } else {
             for (ActionType a : availableActions ) {
                 if (a.getActionNo() == 1) {
@@ -119,7 +164,7 @@ public class MCTS {
                         tmpNode.setParent(node);
                         tmpNode.setAction(new Action(a,ps.getCarOrder().get(i)));
                         tmpNode.setState(s.changeCarType(ps.getCarOrder().get(i)));
-                        if (ps.getCarOrder().get(i) != node.state.getCarType()) {
+                        if (!ps.getCarOrder().get(i).equals(node.state.getCarType())) {
                             possibleNodes.add(tmpNode);
                         }
                     }
@@ -129,7 +174,7 @@ public class MCTS {
                         tmpNode.setParent(node);
                         tmpNode.setAction(new Action(a,ps.getDriverOrder().get(i)));
                         tmpNode.setState(s.changeDriver(ps.getDriverOrder().get(i)));
-                        if (ps.getDriverOrder().get(i) != node.state.getDriver()) {
+                        if (!ps.getDriverOrder().get(i).equals(node.state.getDriver())) {
                             possibleNodes.add(tmpNode);
                         }
                     }
@@ -143,12 +188,6 @@ public class MCTS {
                             possibleNodes.add(tmpNode);
                         }
                     }
-                } else if (a.getActionNo() == 5) {
-                    Node tmpNode = new Node();
-                    tmpNode.setParent(node);
-                    tmpNode.setAction(new Action(a,50 - s.getFuel()));
-                    tmpNode.setState(s.addFuel(50 - s.getFuel()));
-                    possibleNodes.add(tmpNode);
                 } else if (a.getActionNo() == 6) {
                     TirePressure NewPressure = TirePressure.FIFTY_PERCENT;
                     if (NewPressure != node.state.getTirePressure()) {
@@ -180,5 +219,15 @@ public class MCTS {
         }
         node.setChildArray(possibleNodes);
         return possibleNodes;
+    }
+
+    private int increaseStep(ProblemSpec ps, State s, Action a) {
+        if (s.isInSlipCondition())
+            return ps.getSlipRecoveryTime();
+        if (s.isInBreakdownCondition())
+            return ps.getRepairTime();
+        if (a.getActionType() == ActionType.ADD_FUEL)
+            return a.getFuel() / 10;
+        return 1;
     }
 }
