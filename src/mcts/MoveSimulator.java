@@ -1,9 +1,6 @@
 package mcts;
 
-import problem.ProblemSpec;
-import problem.Terrain;
-import problem.Tire;
-import problem.TirePressure;
+import problem.*;
 import simulator.State;
 
 public class MoveSimulator {
@@ -171,4 +168,114 @@ public class MoveSimulator {
 
         return kProbs;
     }
+
+    private State performA2(State currentState, Action a) {
+
+        if (currentState.getCarType().equals(a.getCarType())) {
+            // changing to same car type does not change state but still costs a step
+            // no cheap refill here, muhahaha
+            return currentState;
+        }
+
+        return currentState.changeCarType(a.getCarType());
+    }
+
+    /**
+     * Perform CHANGE_DRIVER action
+     *
+     * @param a a CHANGE_DRIVER action object
+     * @return the next state
+     */
+    private State performA3(State currentState, Action a) { return currentState.changeDriver(a.getDriverType()); }
+
+    /**
+     * Perform the CHANGE_TIRES action
+     *
+     * @param a a CHANGE_TIRES action object
+     * @return the next state
+     */
+    private State performA4(State currentState, Action a) {
+        return currentState.changeTires(a.getTireModel());
+    }
+
+    /**
+     * Perform the ADD_FUEL action
+     *
+     * @param a a ADD_FUEL action object
+     * @return the next state
+     */
+    private State performA5(State currentState, Action a) {
+        // calculate number of steps used for refueling (minus 1 since we add
+        // 1 in main function
+        int stepsRequired = (int) Math.ceil(a.getFuel() / (float) 10);
+        return currentState.addFuel(a.getFuel());
+    }
+
+    /**
+     * Perform the CHANGE_PRESSURE action
+     *
+     * @param a a CHANGE_PRESSURE action object
+     * @return the next state
+     */
+    private State performA6(State currentState, Action a) {
+        return currentState.changeTirePressure(a.getTirePressure());
+    }
+
+    /**
+     * Perform the CHANGE_CAR_AND_DRIVER action
+     *
+     * @param a a CHANGE_CAR_AND_DRIVER action object
+     * @return the next state
+     */
+    private State performA7(State currentState, Action a) {
+
+        if (currentState.getCarType().equals(a.getCarType())) {
+            // if car the same, only change driver so no sneaky fuel exploit
+            return currentState.changeDriver(a.getDriverType());
+        }
+        return currentState.changeCarAndDriver(a.getCarType(),
+                a.getDriverType());
+    }
+
+    /**
+     * Perform the CHANGE_TIRE_FUEL_PRESSURE action
+     *
+     * @param a a CHANGE_TIRE_FUEL_PRESSURE action object
+     * @return the next state
+     */
+    private State performA8(State currentState, Action a) {
+        return currentState.changeTireFuelAndTirePressure(a.getTireModel(),
+                a.getFuel(), a.getTirePressure());
+    }
+
+    public State PerformAction(State s, Action a) {
+        State nextState;
+
+        switch(a.getActionType().getActionNo()) {
+            case 2:
+                nextState = performA2(s, a);
+                break;
+            case 3:
+                nextState = performA3(s, a);
+                break;
+            case 4:
+                nextState = performA4(s, a);
+                break;
+            case 5:
+                nextState = performA5(s, a);
+                break;
+            case 6:
+                nextState = performA6(s, a);
+                break;
+            case 7:
+                nextState = performA7(s, a);
+                break;
+            case 8:
+                nextState = performA8(s, a);
+            default: nextState = s;
+        }
+
+        return nextState;
+    }
+
 }

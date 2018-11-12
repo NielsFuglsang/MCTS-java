@@ -15,19 +15,21 @@ public class MCTS {
         this.ps = ps;
         State s = new State(1, false, false, ps.getFirstCarType(), ProblemSpec.FUEL_MAX,
                 TirePressure.ONE_HUNDRED_PERCENT, ps.getFirstDriver(), ps.getFirstTireModel());
-        System.out.println(s);
         String output = "";
         Simulator sim = new Simulator(ps, output);
-        for (int i = 0; i < 10; i++) {
-            sim.step(findNextMove(s));
-            System.out.println(s);
+        MoveSimulator ms = new MoveSimulator();
+        Action a;
+        while (s.getPos() < ps.getN()-1) {
+            a = findNextMove(s);
+            sim.step(a);
+            s = ms.PerformAction(s, a);
             sim.step(new Action(ActionType.MOVE));
         }
         System.out.println(output);
     }
 
     private int getMillisForCurrentLevel() {
-        return 5 * ps.getLevel().getLevelNumber() + 10;
+        return 3 * ps.getLevel().getLevelNumber() + 10;
     }
 
     public Action findNextMove(State s) {
@@ -50,7 +52,7 @@ public class MCTS {
             // Phase 3 - Simulation
             Node nodeToExplore = promisingNode;
             nodeToExplore = promisingNode.getRandomChildNode();
-            int playoutResult = simulateRandomPlayout(nodeToExplore);
+            double playoutResult = simulateRandomPlayout(nodeToExplore);
 
             // Phase 4 - Update
             backPropagation(nodeToExplore, playoutResult);
@@ -67,7 +69,7 @@ public class MCTS {
         return node;
     }
 
-    private void backPropagation(Node nodeToExplore, int playoutResult) {
+    private void backPropagation(Node nodeToExplore, double playoutResult) {
         Node tempNode = nodeToExplore;
         while (tempNode != null) {
             tempNode.incrementVisit();
@@ -76,11 +78,17 @@ public class MCTS {
         }
     }
 
-    private int simulateRandomPlayout(Node node) {
+    private double simulateRandomPlayout(Node node) {
         MoveSimulator ms = new MoveSimulator();
         State simResult = ms.performA1(ps, node);
-        node.reward += simResult.getPos();
-        return simResult.getPos();
+        if (simResult.isInBreakdownCondition()){
+            node.reward -= 3;
+        } else if (simResult.isInSlipCondition()){
+            node.reward -= 3;
+        } else {
+            node.reward += simResult.getPos();
+        }
+        return node.reward;
     }
 
     public List<Node> getPossibleChildren(Node node) {
@@ -117,8 +125,8 @@ public class MCTS {
                     }
                 }
             } else if (a.getActionNo() == 5) {
-                tmpNode.setAction(new Action(a,50 - tmpNode.state.getFuel()));
-                tmpNode.setState(s.addFuel(50 - tmpNode.state.getFuel()));
+                tmpNode.setAction(new Action(a,50 - s.getFuel()));
+                tmpNode.setState(s.addFuel(50 - s.getFuel()));
                 possibleNodes.add(tmpNode);
             } else if (a.getActionNo() == 6) {
                 TirePressure NewPressure = TirePressure.FIFTY_PERCENT;
